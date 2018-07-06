@@ -14,8 +14,10 @@ Config file example:
 
 ```json
 {
-  "mainnet": false,
-  "contractAddr": "n1LXsq2imeWFSq7ZSpoT1JgrRoKpMHP8stz",
+  "contractAddr": {
+    "mainnet": "n1LXsq2imeWFSq7ZSpoT1JgrRoKpMHP8stz",
+    "testnet": "n1LXsq2imeWFSq7ZSpoT1JgrRoKpMHP8stz"
+  },
   "passphrase": "some password"
 }
 ```
@@ -39,7 +41,8 @@ $ PORT=3002 yarn dev # live-reload fastify server
 ### Claim
 ```bash
 # curl -X POST http://localhost:3002/claim/{{your_address}}
-$ curl -X POST http://localhost:3002/claim/n1LXsq2imeWFSq7ZSpoT1JgrRoKpMHP8stz
+$ curl -X POST http://localhost:3002/testnet/claim/n1LXsq2imeWFSq7ZSpoT1JgrRoKpMHP8stz
+$ curl -X POST http://localhost:3002/mainnet/claim/n1LXsq2imeWFSq7ZSpoT1JgrRoKpMHP8stz
 ```
 
 # License

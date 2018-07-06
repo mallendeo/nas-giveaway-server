@@ -25,18 +25,26 @@ const wallet = fs.readJSONSync(path.join(configDir, wallets[0]))
 const configPath = path.join(configDir, 'config.json')
 const config = fs.readJSONSync(configPath)
 
-;['mainnet', 'contractAddr', 'passphrase'].forEach(prop => {
-  if (typeof config[prop] === 'undefined') {
-    throw Error(`mainnet, contractAddr, passphrase are required!`)
-  }
-})
+if (
+  !config || !config.contractAddr || !config.passphrase ||
+  !config.contractAddr.mainnet ||
+  !config.contractAddr.testnet
+) {
+  throw Error(`Missing props, check your config file "${configPath}"`)
+}
 
-const callbackUrl = config.mainnet
-  ? 'https://mainnet.nebulas.io'
-  : 'https://testnet.nebulas.io'
+const mainNeb = new Neb()
+mainNeb.setRequest(new HttpRequest('https://mainnet.nebulas.io'))
 
-const neb = new Neb()
-neb.setRequest(new HttpRequest(callbackUrl))
+const testNeb = new Neb()
+testNeb.setRequest(new HttpRequest('https://testnet.nebulas.io'))
+
+const nets = {
+  mainnet: mainNeb,
+  testnet: testNeb
+}
+
+const getNeb = mainnet => nets[mainnet ? 'mainnet' : 'testnet']
 
 const account = new Account()
   .fromKey(wallet, config.passphrase)
@@ -45,7 +53,9 @@ const account = new Account()
  * @param {*} to Address
  * @param {Object} contract { function: '', args: [] }
  */
-const send = async (to, { fn, args = [] } = {}) => {
+const send = async (to, { fn, args = [] } = {}, mainnet = true) => {
+  const neb = getNeb(mainnet)
+
   if (!to) throw Error('Missing parameter `to`')
   const state = await neb.api.getAccountState(account.getAddressString())
 
@@ -55,7 +65,7 @@ const send = async (to, { fn, args = [] } = {}) => {
   } : null
 
   const tx = new Transaction(
-    config.mainnet ? 1 : 1001,
+    mainnet ? 1 : 1001,
     account,
     to,
     '0',
@@ -79,27 +89,44 @@ fastify.get('/', (request, reply) => {
   reply.send({ success: true, addr: ADDR })
 })
 
-fastify.post('/claim/:address', async request => {
-  try {
-    const tx = await send(config.contractAddr, {
-      fn: 'claim',
-      args: [request.params.address]
-    })
+fastify.post('/:net/claim/:address', async request => {
+  const { net, address } = request.params
+  if (['mainnet', 'testnet'].indexOf(net) < 0) {
+    return { success: false, error: 'Invalid net' }
+  }
 
-    return { success: true, payload: tx }
+  try {
+    const { txhash } = await send(config.contractAddr[net], {
+      fn: 'claim',
+      args: [address]
+    }, net === 'mainnet')
+
+    return {
+      success: true,
+      payload: {
+        txhash,
+        url: `https://explorer.nebulas.io/#/${net}/tx/${txhash}`
+      }
+    }
   } catch (err) {
     return { success: false, error: err.message }
   }
 })
 
-fastify.listen(PORT, err => {
-  if (err) throw err
-
-  neb.api.getAccountState({ address: ADDR })
+const logStatus = (mainnet = true) => {
+  getNeb(mainnet).api.getAccountState({ address: ADDR })
     .then(state => {
+      console.log('===', mainnet ? 'Mainnet' : 'Testnet')
       console.log('Wallet address:', ADDR)
       console.log('Balance:', state.balance / 10 ** 18, 'NAS')
       console.log('Nonce:', state.nonce)
     })
     .catch(console.error)
+}
+
+fastify.listen(PORT, err => {
+  if (err) throw err
+
+  logStatus()
+  logStatus(false)
 })
