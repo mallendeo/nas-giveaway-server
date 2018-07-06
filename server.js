@@ -124,7 +124,7 @@ const logStatus = (mainnet = true) => {
     .catch(console.error)
 }
 
-fastify.listen(PORT, err => {
+fastify.listen(PORT, '0.0.0.0', err => {
   if (err) throw err
 
   logStatus()
