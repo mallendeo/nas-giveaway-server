@@ -19,7 +19,7 @@ const configDir = path.join(os.homedir(), '.nas-giveaway')
 fs.ensureDirSync(configDir)
 
 const wallets = fs.readdirSync(configDir).filter(name => /^n1.+json$/.test(name))
-if (wallets.length !== 1) throw Error(`Multiple wallets found in "${configDir}"`)
+if (wallets.length !== 1) throw Error(`There must be at least one wallet in "${configDir}"`)
 const wallet = fs.readJSONSync(path.join(configDir, wallets[0]))
 
 const configPath = path.join(configDir, 'config.json')
