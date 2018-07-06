@@ -86,7 +86,14 @@ const ADDR = account.getAddressString()
 fastify.use(cors())
 
 fastify.get('/', (request, reply) => {
-  reply.send({ success: true, addr: ADDR })
+  reply.send({
+    success: true,
+    addr: ADDR,
+    contract: {
+      mainnet: config.contractAddr.mainnet,
+      testnet: config.contractAddr.testnet
+    }
+  })
 })
 
 fastify.post('/:net/claim/:address', async request => {
